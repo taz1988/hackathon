@@ -9,6 +9,8 @@
 <constant value="0" name="STATE_BASE"/>
 <constant value="1" name="STATE_INPUT_BUTTON"/>
 <constant value="2" name="STATE_INPUT_SENSOR"/>
+<constant value="1" name="PRESSED"/>
+<constant value="0" name="RELEASED"/>
 
 
 <!--show keywords state-->
@@ -20,10 +22,12 @@
 # STATE_BASE 0
 # STATE_INPUT_BUTTON 1
 # STATE_INPUT_SENSOR 2
+# pressed 1
+# released 0
 
 
 var numbers[4] = [0,0,0,0]
-var state = 
+var state =
 
 
 
@@ -46,17 +50,30 @@ sub init
 sub switch_state (state)
 #
 
-onevent button.backward 
+onevent button.backward
+	if button.center == PRESSED then
+		
+	end
 #
 onevent button.left
-  if  
+    if button.center == PRESSED then
+		
+	end  
 #
 onevent button.center 
-#gergo
+	if button.center == PRESSED then
+		
+	end
 #
 onevent button.forward 
+	if button.center == PRESSED then
+		
+	end
 #
 onevent button.right 
+	if button.center == PRESSED then
+		
+	end
 #</node>
 
 
