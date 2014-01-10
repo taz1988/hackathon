@@ -242,20 +242,22 @@ sub stop
 # Drive straight
 sub drive
 
-  if prox.horizontal[0] > HORIZONTAL_THRESHOLD or
+  if (prox.horizontal[0] > HORIZONTAL_THRESHOLD or
 	 prox.horizontal[1] > HORIZONTAL_THRESHOLD or
-     prox.horizontal[2] > HORIZONTAL_THRESHOLD then
-     if rock_found == 0 then
+     prox.horizontal[2] > HORIZONTAL_THRESHOLD) then
+     if rock_found == 0 or rock_found == 1 then
 	     dir = RIGHT
 	     callsub turn_right
+	     rock_found = 1
 	 else
 	 	 callsub stop
 	 end
   elseif prox.horizontal[3] > HORIZONTAL_THRESHOLD or
      	 prox.horizontal[4] > HORIZONTAL_THRESHOLD then
-     if rock_found == 0 then
+     if rock_found == 0 or rock_found == 1 then     	
 	     dir = LEFT
 	     callsub turn_left
+	     rock_found = 1
      else
      	callsub stop
      end
@@ -275,8 +277,14 @@ sub drive
   #   turn the robot in the appropriate direction
   elseif  prox.ground.delta[0] > THRESHOLD then
   	 callsub turn_right
+	 if rock_found == 1 then
+		rock_found = 2
+	 end
   elseif  prox.ground.delta[1] > THRESHOLD then
   	 callsub turn_left
+	 if rock_found == 1 then
+		rock_found = 2
+	 end
   # Otherwise, drive straight
   else
   	 callsub drive_straight
@@ -287,6 +295,7 @@ onevent prox
   if  state == 1 then
 	callsub drive
   end
+
 </node>
 
 
