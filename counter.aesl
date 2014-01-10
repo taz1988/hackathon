@@ -67,11 +67,12 @@ onevent button.center
 		button_is_pressed = button_is_pressed + 1
 	elseif button.center == RELEASED then
 		if button_is_pressed >= 60 then
-			state = STATE_INPUT_SENSOR
+			new_state = STATE_INPUT_SENSOR
 		else
-			state = STATE_INPUT_BUTTON
+			new_state = STATE_INPUT_BUTTON
 		end
 		button_is_pressed = 0
+	   callsub switch_state
 	end
 #
 onevent button.forward 
