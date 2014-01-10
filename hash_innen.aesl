@@ -7,14 +7,16 @@
 
 <!--list of constants-->
 <constant value="150" name="THRESHOLD"/>
-<constant value="100" name="CHANGE"/>
+<constant value="150" name="CHANGE"/>
 <constant value="100" name="DIFF"/>
 <constant value="100" name="SPEED"/>
-<constant value="10" name="TIMER"/>
+<constant value="4000" name="TIMER"/>
 <constant value="1" name="RIGHT"/>
 <constant value="-1" name="LEFT"/>
 <constant value="0" name="STRAIGHT"/>
-<constant value="2000" name="HORIZONTAL_THRESHOLD"/>
+<constant value="3500" name="HORIZONTAL_THRESHOLD"/>
+<constant value="0" name="OFF"/>
+<constant value="1" name="ON"/>
 
 
 <!--show keywords state-->
@@ -190,34 +192,39 @@ var rock_found
 
 # Initialization
 motor = SPEED
-motor_change = (motor * CHANGE)/100
-state = 0
+motor_change = (SPEED * CHANGE)/100
+state = OFF
 dir = STRAIGHT
 line_found = 0
 rock_found = 0
-#timer.period[0] = TIMER
+
 #speed indicator
 call leds.circle(32,0,0,0,0,0,0,0)
 call leds.buttons(0,0,0,0)
 
-# When center button released
-onevent button.center
-  if  button.center == 0 then
+sub reset	
+	timer.period[0] = -1
     line_found = 0
+    rock_found = 0
     dir = STRAIGHT
     # If off, set state to 1 (on) and dirve forwards
-    if  state == 0 then
-      state = 1
+    if  state == OFF then
+      state = ON
       motor.left.target  = motor
       motor.right.target = motor
     #   else if state is on, call stop the motors
     else
-      state = 0
+      state = OFF
       motor.left.target  = 0
       motor.right.target = 0
     end
     motor_change = (motor * CHANGE)/100
-  end
+
+# When center button released
+onevent button.center
+	if  button.center == 0 then
+  		callsub reset
+  	end
   
 sub drive_straight
   motor.left.target  = motor
@@ -245,21 +252,23 @@ sub drive
   if (prox.horizontal[0] > HORIZONTAL_THRESHOLD or
 	 prox.horizontal[1] > HORIZONTAL_THRESHOLD or
      prox.horizontal[2] > HORIZONTAL_THRESHOLD) then
-     if rock_found == 0 or rock_found == 1 then
+     if rock_found == 0 then
 	     dir = RIGHT
 	     callsub turn_right
-	     rock_found = 1
+	     timer.period[0] = TIMER
 	 else
 	 	 callsub stop
+	 	 callsub reset
 	 end
   elseif prox.horizontal[3] > HORIZONTAL_THRESHOLD or
      	 prox.horizontal[4] > HORIZONTAL_THRESHOLD then
-     if rock_found == 0 or rock_found == 1 then     	
+     if rock_found == 0 then     	
 	     dir = LEFT
 	     callsub turn_left
-	     rock_found = 1
+	     timer.period[0] = TIMER
      else
      	callsub stop
+     	callsub reset
      end
   
   # If both sensors no longer detect the tape
@@ -269,30 +278,44 @@ sub drive
     if  dir == RIGHT then
       callsub turn_right
     elseif dir == LEFT then    	
-  	  callsub turn_left      
+  	  callsub turn_left
+  	#no tape and dir == STRAIGHT
   	else
-  	  callsub drive_straight
+  	  #we've already seen the line, stay on it
+  	  if line_found == 1 then
+  	  	dir = LEFT
+  	  	callsub turn_left
+  	  #we've never seen the line before	
+  	  else
+  	  	callsub drive_straight
+  	  end 	  
     end
+    
   # If one of the ground sensors finds the tape
   #   turn the robot in the appropriate direction
   elseif  prox.ground.delta[0] > THRESHOLD then
   	 callsub turn_right
-	 if rock_found == 1 then
-		rock_found = 2
-	 end
+  	 dir = RIGHT
   elseif  prox.ground.delta[1] > THRESHOLD then
   	 callsub turn_left
-	 if rock_found == 1 then
-		rock_found = 2
-	 end
+  	 dir = LEFT
   # Otherwise, drive straight
   else
+     line_found = 1
   	 callsub drive_straight
+  	 dir = 0
   end
+
+#started when a rock is seen for the first time  
+onevent timer0
+	if rock_found == 0 then
+		rock_found = 1 
+		timer.period[0] = -1
+	end
 
 # Proximity event occurs, call subroutine drive
 onevent prox
-  if  state == 1 then
+  if  state == ON then
 	callsub drive
   end
 
