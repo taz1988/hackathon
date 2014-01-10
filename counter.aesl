@@ -29,6 +29,8 @@
 var numbers[4] = [0,0,0,0]
 var state =
 
+var button_is_pressed = 0
+
 
 
 sub show_number (number_index)
@@ -62,12 +64,19 @@ onevent button.left
 #
 onevent button.center 
 	if button.center == PRESSED then
-		
+		button_is_pressed = button_is_pressed + 1
+	elseif button.center == RELEASED then
+		if button_is_pressed >= 60 then
+			state = STATE_INPUT_SENSOR
+		else
+			state = STATE_INPUT_BUTTON
+		end
+		button_is_pressed = 0
 	end
 #
 onevent button.forward 
 	if button.center == PRESSED then
-		
+
 	end
 #
 onevent button.right 
