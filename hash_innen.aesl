@@ -10,11 +10,11 @@
 <constant value="100" name="CHANGE"/>
 <constant value="100" name="DIFF"/>
 <constant value="100" name="SPEED"/>
-<constant value="10" name="TIMER"/>
+<constant value="3000" name="TIMER"/>
 <constant value="1" name="RIGHT"/>
 <constant value="-1" name="LEFT"/>
 <constant value="0" name="STRAIGHT"/>
-<constant value="2000" name="HORIZONTAL_THRESHOLD"/>
+<constant value="3000" name="HORIZONTAL_THRESHOLD"/>
 
 
 <!--show keywords state-->
@@ -195,7 +195,7 @@ state = 0
 dir = STRAIGHT
 line_found = 0
 rock_found = 0
-#timer.period[0] = TIMER
+
 #speed indicator
 call leds.circle(32,0,0,0,0,0,0,0)
 call leds.buttons(0,0,0,0)
@@ -245,19 +245,19 @@ sub drive
   if (prox.horizontal[0] > HORIZONTAL_THRESHOLD or
 	 prox.horizontal[1] > HORIZONTAL_THRESHOLD or
      prox.horizontal[2] > HORIZONTAL_THRESHOLD) then
-     if rock_found == 0 or rock_found == 1 then
+     if rock_found == 0 then
 	     dir = RIGHT
 	     callsub turn_right
-	     rock_found = 1
+	     timer.period[0] = TIMER
 	 else
 	 	 callsub stop
 	 end
   elseif prox.horizontal[3] > HORIZONTAL_THRESHOLD or
      	 prox.horizontal[4] > HORIZONTAL_THRESHOLD then
-     if rock_found == 0 or rock_found == 1 then     	
+     if rock_found == 0 then     	
 	     dir = LEFT
 	     callsub turn_left
-	     rock_found = 1
+	     timer.period[0] = TIMER
      else
      	callsub stop
      end
@@ -277,18 +277,17 @@ sub drive
   #   turn the robot in the appropriate direction
   elseif  prox.ground.delta[0] > THRESHOLD then
   	 callsub turn_right
-	 if rock_found == 1 then
-		rock_found = 2
-	 end
   elseif  prox.ground.delta[1] > THRESHOLD then
   	 callsub turn_left
-	 if rock_found == 1 then
-		rock_found = 2
-	 end
   # Otherwise, drive straight
   else
   	 callsub drive_straight
   end
+  
+onevent timer0
+	if rock_found == 0 then
+		rock_found = 1 
+	end
 
 # Proximity event occurs, call subroutine drive
 onevent prox
