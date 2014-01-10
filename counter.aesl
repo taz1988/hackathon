@@ -11,6 +11,7 @@
 <constant value="2" name="STATE_INPUT_SENSOR"/>
 <constant value="1" name="PRESSED"/>
 <constant value="0" name="RELEASED"/>
+<constant value="4000" name="THRESHOLD"/>
 
 
 <!--show keywords state-->
@@ -18,7 +19,7 @@
 
 
 <!--node e-puck 1-->
-<node nodeId="1" name="e-puck 1"># CONSTS
+<node nodeId="0" name="e-puck 1"># CONSTS
 # STATE_BASE 0
 # STATE_INPUT_BUTTON 1
 # STATE_INPUT_SENSOR 2
@@ -96,15 +97,155 @@ onevent button.right
 
 
 <!--node e-puck 2-->
-<node nodeId="2" name="e-puck 2"></node>
+<node nodeId="0" name="e-puck 2"></node>
 
 
 <!--node e-puck 3-->
-<node nodeId="3" name="e-puck 3"></node>
+<node nodeId="0" name="e-puck 3"></node>
 
 
 <!--node e-puck 4-->
-<node nodeId="4" name="e-puck 4"></node>
+<node nodeId="0" name="e-puck 4"></node>
+
+
+<!--node thymio-II-->
+<node nodeId="1" name="thymio-II">var number
+var state
+var new_state
+var current_slot
+var radix
+var numbers[4] = [0,0,0,0]
+var circle_leds[8]
+var mask = 1
+var mask_result
+var i = 0
+
+var numberIndex = 0
+
+number = 0
+current_slot = 0
+state = STATE_BASE
+new_state = STATE_BASE
+call leds.top(0,32,0)
+radix = 0
+
+sub increment
+	if  state == STATE_INPUT_BUTTON then
+		if radix == 0 then			
+			number = number + 1
+		else
+			number = number + 10
+		end
+	elseif  state == STATE_INPUT_SENSOR then
+		if prox.horizontal[0] > THRESHOLD then
+			number = number + 1
+		elseif prox.horizontal[1] > THRESHOLD then
+			number = number + 10	
+		end
+	end
+
+sub save_number
+	numbers[current_slot] = number
+	number = 0
+	radix = 0
+	if current_slot == 3 then
+		current_slot = 0
+	else
+		current_slot = current_slot + 1
+	end
+
+sub switch_state
+	if new_state == STATE_BASE then
+		call leds.top(0,32,0)
+		state = STATE_BASE
+		callsub save_number
+	elseif new_state == STATE_INPUT_BUTTON then
+		call leds.top(32,0,0)
+		state = STATE_INPUT_BUTTON
+		number = 0
+		radix = 0
+	elseif new_state == STATE_INPUT_SENSOR then
+		call leds.top(0,0,32)
+		state = STATE_INPUT_SENSOR
+		number = 0
+	end
+	call leds.circle(0,0,0,0,0,0,0,0)
+	
+sub show_number
+ mask = 1
+ for i in 0:7 do
+  mask_result = numbers[numberIndex] &amp; mask
+  if mask_result > 0 then
+   circle_leds[i] = 32
+  else
+   circle_leds[i] = 0
+  end
+  mask = mask &lt;&lt; 1
+ end
+ call leds.circle(circle_leds[0], circle_leds[1], circle_leds[2], circle_leds[3], circle_leds[4], circle_leds[5], circle_leds[6], circle_leds[7])
+
+onevent button.backward
+ if button.backward == PRESSED then
+ 	if state == STATE_BASE then
+ 		numberIndex = 2
+		callsub show_number
+	elseif state == STATE_INPUT_BUTTON or
+		   state == STATE_INPUT_SENSOR then
+		   callsub increment
+ 	end
+ 	
+ end
+#
+onevent button.left
+    if button.left == PRESSED then
+  		if state == STATE_BASE then
+	 		numberIndex = 3
+			callsub show_number
+		end
+ 	end
+#
+onevent button.center 
+ if button.center == PRESSED then
+  if prox.horizontal[4] > THRESHOLD then
+   if state == STATE_BASE then
+    new_state = STATE_INPUT_SENSOR
+   else
+    new_state = STATE_BASE
+   end
+  else
+   if state == STATE_BASE then
+    new_state = STATE_INPUT_BUTTON
+   else
+    new_state = STATE_BASE
+   end
+  end
+    callsub switch_state
+ end
+
+onevent button.forward 
+ if button.forward == PRESSED then
+ 	if state == STATE_BASE then
+ 		numberIndex = 0
+		callsub show_number
+	elseif state == STATE_INPUT_BUTTON then
+		   if radix == 1 then
+		   	 radix = 0
+		   	 new_state = STATE_BASE
+		   	 callsub switch_state
+		   elseif radix == 0 then
+		   		radix = 1
+		   end
+ 	end
+ end
+
+onevent button.right 
+ if button.right == PRESSED then
+ 	if state == STATE_BASE then
+	 	numberIndex = 1
+		callsub show_number
+	end
+ end
+</node>
 
 
 </network>
