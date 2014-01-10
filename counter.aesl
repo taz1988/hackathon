@@ -6,6 +6,9 @@
 
 
 <!--list of constants-->
+<constant value="0" name="STATE_BASE"/>
+<constant value="1" name="STATE_INPUT_BUTTON"/>
+<constant value="2" name="STATE_INPUT_SENSOR"/>
 
 
 <!--show keywords state-->
@@ -20,7 +23,7 @@
 
 
 var numbers[4] = [0,0,0,0]
-var state =
+var state = 
 
 
 
