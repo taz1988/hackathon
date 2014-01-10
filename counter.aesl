@@ -1,0 +1,72 @@
+<!DOCTYPE aesl-source>
+<network>
+
+
+<!--list of global events-->
+
+
+<!--list of constants-->
+
+
+<!--show keywords state-->
+<keywords flag="true"/>
+
+
+<!--node e-puck 1-->
+<node nodeId="1" name="e-puck 1"># CONSTS
+# STATE_BASE 0
+# STATE_INPUT_BUTTON 1
+# STATE_INPUT_SENSOR 2
+
+
+var numbers[4] = [0,0,0,0]
+var state =
+
+
+
+sub show_number (number_index)
+#zoli
+#
+
+sub add_ten
+#hanko
+#
+
+sub add_one
+#hanko
+#
+
+sub init
+#hanko
+#
+
+sub switch_state (state)
+#
+
+onevent button.backward 
+#
+onevent button.left
+  if  
+#
+onevent button.center 
+#gergo
+#
+onevent button.forward 
+#
+onevent button.right 
+#</node>
+
+
+<!--node e-puck 2-->
+<node nodeId="2" name="e-puck 2"></node>
+
+
+<!--node e-puck 3-->
+<node nodeId="3" name="e-puck 3"></node>
+
+
+<!--node e-puck 4-->
+<node nodeId="4" name="e-puck 4"></node>
+
+
+</network>
