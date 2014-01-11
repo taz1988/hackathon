@@ -3,6 +3,8 @@
 
 
 <!--list of global events-->
+<event size="5" name="DO_CALIBRATE"/>
+<event size="10" name="STATE_PRE_CALIBRATE"/>
 
 
 <!--list of constants-->
@@ -10,7 +12,7 @@
 <constant value="80" name="CHANGE"/>
 <constant value="100" name="DIFF"/>
 <constant value="200" name="SPEED"/>
-<constant value="1500" name="TIMER"/>
+<constant value="100" name="TIMER"/>
 <constant value="1" name="RIGHT"/>
 <constant value="-1" name="LEFT"/>
 <constant value="0" name="STRAIGHT"/>
@@ -18,6 +20,24 @@
 <constant value="0" name="STATE_OFF"/>
 <constant value="1" name="STATE_SEARCHING"/>
 <constant value="2" name="STATE_FOLLOWING"/>
+<constant value="2255" name="TURN_TIMER"/>
+<constant value="3" name="STATE_CALIBRATE"/>
+<constant value="50" name="CALIBRATION_SPEED"/>
+<constant value="1" name="BLACK"/>
+<constant value="2" name="GREEN"/>
+<constant value="3" name="STOP"/>
+<constant value="700" name="THRESHOLD_NOTHING"/>
+<constant value="400" name="THRESHOLD_BLACK"/>
+<constant value="2500" name="THRESHOLD_DEADLINE"/>
+<constant value="0" name="SD_LEFT"/>
+<constant value="1" name="SD_RIGHT"/>
+<constant value="10" name="STATE_PRE_CALIBRATE"/>
+<constant value="25" name="PRE_CALIBRATE_THREESHOLD"/>
+<constant value="425" name="STRAIGHT_SPEED"/>
+<constant value="1150" name="STRAIGHT_TIMER"/>
+<constant value="20" name="STATE_GO"/>
+<constant value="0" name="SD_UP"/>
+<constant value="40" name="SD_UP_SECOND"/>
 
 
 <!--show keywords state-->
@@ -187,9 +207,18 @@ var state # 0 = off, 1 = on
 
 var diff  # The difference between the two ground sensors
 var dir   # The last direction: 1 = right, -1 = left
-
-var timer_expired = 0
-#var rock_found
+var right = 0
+var left = 0
+var position[2]
+var direction[2]
+var current_target[2]
+var target1[2] = [2,2]
+var target2[2] = [6,3]
+var target3[2] = [5,4]
+var target4[2] = [5,5]
+var target_index = 0
+var sound_state = 0
+var target_direction[2]
 
 # Initialization
 motor = SPEED
@@ -199,13 +228,17 @@ dir = STRAIGHT
 #rock_found = 0
 
 #speed indicator
-call leds.circle(32,0,0,0,0,0,0,0)
+call leds.circle(0,0,0,0,0,0,0,0)
 call leds.buttons(0,0,0,0)
+call leds.prox.v(0, 0)
 
-sub reset	
+sub reset
+	
 	timer.period[0] = -1
-#    rock_found = 0
+    call leds.circle(0,0,0,0,0,0,0,0)
     dir = STRAIGHT
+    right = 0
+    left = 0
     # If off, set state to 1 (on) and dirve forwards
     if  state == STATE_OFF then
       state = STATE_SEARCHING
@@ -230,12 +263,38 @@ sub drive_straight
   motor.right.target = motor
   call leds.buttons(32,0,0,0)
   
+sub straight_one_cell
+  position[0] = position[0] + direction[0]
+  position[1] = position[1] + direction[1]
+  motor.left.target  = STRAIGHT_SPEED
+  motor.right.target = STRAIGHT_SPEED
+  call leds.top(31,0,0) 
+  timer.period[0] = STRAIGHT_TIMER
+  
+sub back_one_cell
+  position[0] = position[0] - direction[0]
+  position[1] = position[1] - direction[1]
+  motor.left.target  = - STRAIGHT_SPEED
+  motor.right.target = - STRAIGHT_SPEED
+  call leds.top(31,0,0) 
+  timer.period[0] = STRAIGHT_TIMER
+  
 sub turn_left
+  if state == STATE_FOLLOWING then
+  	if left &lt; 32767 then
+  		left = left + 1
+  	end
+  end
   motor.left.target  = motor - motor_change
   motor.right.target = motor + motor_change
   call leds.buttons(0,0,0,32)
     
 sub turn_right
+  if state == STATE_FOLLOWING then
+  	if right &lt; 32767 then
+  		right = right + 1
+  	end
+  end
   motor.left.target  = motor + motor_change
   motor.right.target = motor - motor_change
   call leds.buttons(0,32,0,0)
@@ -244,61 +303,161 @@ sub stop
   motor.left.target  = 0
   motor.right.target = 0
   call leds.buttons(0,0,0,0)
-
-# Drive straight
-sub drive
-  if  prox.ground.delta[0] > THRESHOLD and
-      prox.ground.delta[1] > THRESHOLD then
-	    # Turn left or right depending on the value in dir
-	    if  dir == RIGHT then
-	      callsub turn_right
-	    elseif dir == LEFT then    	
-	  	  callsub turn_left
-	  	#no tape and dir == STRAIGHT
-	  	else
-	  	  	#we've already seen the line, stay on it
-	  	  if state == STATE_FOLLOWING then
-	  	  	dir = LEFT
-	  	  	callsub turn_left
-	  	  #we've never seen the line before	
-	  	  else
-	  	  	callsub drive_straight
-	  	  end
-	    end
-	    if state == STATE_FOLLOWING then	  	
-	  	  if timer_expired == 1 then
-	  		callsub stop
-	  		callsub reset
-	  	  else
-	  		if timer.period[0] &lt; 0 then
-	  			timer.period[0] = TIMER
-	  		end	  		
-	  	  end
-	    end	  
-    
-  # If one of the ground sensors finds the tape
-  #   turn the robot in the appropriate direction
-  else
-  	timer_expired = 0
-  	timer.period[0] = -1
-  	state = STATE_FOLLOWING
-	  if  prox.ground.delta[0] > THRESHOLD then
+  
+sub turn_left_90
+	if direction[0] == 0 and direction[1] == 1 then
+		direction[0] = -1
+		direction[1] = 0
+	elseif direction[0] == -1 and direction[1] == 0 then
+		direction[0] = 0
+		direction[1] = -1
+	elseif direction[0] == 0 and direction[1] == -1 then
+		direction[0] = 1
+		direction[1] = 0
+	elseif direction[0] == 1 and direction[1] == 0 then
+		direction[0] = 0
+		direction[1] = 1
+	end
+	motor.left.target = -100
+	motor.right.target = 100
+	timer.period[0] = TURN_TIMER
+	
+sub turn_right_90
+	if direction[0] == 0 and direction[1] == 1 then
+		direction[0] = 1
+		direction[1] = 0
+	elseif direction[0] == 1 and direction[1] == 0 then
+		direction[0] = 0
+		direction[1] = -1
+	elseif direction[0] == 0 and direction[1] == -1 then
+		direction[0] = -1
+		direction[1] = 0
+	elseif direction[0] == -1 and direction[1] == 0 then
+		direction[0] = 0
+		direction[1] = 1
+	end
+	motor.right.target = -100
+	motor.left.target = 100
+	
+	timer.period[0] = TURN_TIMER
+	
+# call this when we follow black line
+sub useBlack
+	if  prox.ground.delta[0] > THRESHOLD_NOTHING then
 	  	 callsub turn_right
-	  	 dir = RIGHT
-	  elseif  prox.ground.delta[1] > THRESHOLD then
+	  elseif  prox.ground.delta[1] > THRESHOLD_NOTHING then
 	  	 callsub turn_left
-	  	 dir = LEFT
 	  # Otherwise, drive straight
 	  else	     
 	  	 callsub drive_straight
-	  	 dir = 0
 	  end
-  end
+  
+#this function check that we reach black line
+sub checkBlack
+	if  prox.ground.delta[0] &lt; THRESHOLD_BLACK or
+      prox.ground.delta[1] &lt; THRESHOLD_BLACK then
+		state = STATE_FOLLOWING
+		timer.period[0] = TIMER
+		callsub useBlack
+	end
+	
+sub next_target
+	if target_index == 0 then
+		current_target = target1
+	elseif target_index == 1 then
+		current_target = target2
+	elseif target_index == 2 then
+		current_target = target3
+	elseif target_index == 3 then	
+		current_target = target4
+	end
+	target_index = target_index + 1
+	
+sub move_to_target
+	
+		if  current_target[0] == position[0] and
+		    current_target[1] == position[1] then
+		    if target_index > 0 then
+		    	sound_state = 0
+    			call sound.freq(392,20)
+				if target_index == 4 then
+					callsub stop
+					callsub reset
+				end
+			end
+			callsub next_target
+		end
+	
+	if state != STATE_OFF then
+		target_direction[0] = current_target[0] - position[0]
+		target_direction[1] = current_target[1] - position[1]
+		
+		if target_direction[0] > 0 and direction[0] > 0 then
+			callsub straight_one_cell
+		elseif  target_direction[1] > 0 and direction[1] > 0 then
+			callsub straight_one_cell
+		elseif target_direction[0] &lt; 0 and direction[0] &lt; 0 then
+			callsub straight_one_cell
+		elseif  target_direction[1] &lt; 0 and direction[1] &lt; 0 then
+			callsub straight_one_cell
+		else
+			callsub turn_right_90
+		end
+	end
+	
+sub checkDeadline
+	if  prox.horizontal[3] > THRESHOLD_DEADLINE then
+		callsub stop
+		state = STATE_PRE_CALIBRATE
+		if left &lt; right then
+			position[0] = 1
+			position[1] = 0
+			direction[0] = -1
+			direction[1] = 0
+		else
+			position[0] = 0
+			position[1] = 1
+			direction[0] = 0
+			direction[1] = -1
+		end
+		current_target[0] = 1
+		current_target[1] = 1
+		
+		state = STATE_GO
+		callsub move_to_target
+	end
+
+#main driver logic
+sub drive
+		if state == STATE_SEARCHING then
+			callsub checkBlack
+		elseif state == STATE_FOLLOWING then					
+			callsub useBlack
+			callsub checkDeadline
+		end
   
 onevent timer0
-	timer_expired = 1
-	timer.period[0] = -1
-
+	if state == STATE_GO then
+		callsub stop
+		callsub move_to_target
+	end
+	
+# Victory sound from Beethoven's Fifth
+# Play G three times for 1/3 seconds
+#   and then Eb for 4/3 seconds
+onevent sound.finished
+  call leds.top(32,32,0)
+  if  sound_state &lt; 2 then
+    call sound.freq(392,20)
+    sound_state++
+  elseif  sound_state == 2 then
+    call sound.freq(311,80)
+    sound_state++
+  elseif  sound_state == 3 then
+    call leds.top(0,0,0)
+  end
+		
+	
 # Proximity event occurs, call subroutine drive
 onevent prox
   if  state == STATE_SEARCHING or
